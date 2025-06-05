@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV BRANCH=main
 
 # Set locale to en_US.UTF-8 and timezone to UTC
-RUN apt-get update && apt-get install -y locales tzdata supervisor git python3 python3-pip python3-venv nodejs npm curl wget
+RUN apt-get update && apt-get install -y locales tzdata supervisor git python3 python3-venv python3-pip python3-full nodejs npm curl wget
 RUN sed -i -e 's/# \(en_US\.UTF-8 .*\)/\1/' /etc/locale.gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
     update-locale LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
@@ -22,7 +22,11 @@ WORKDIR /app
 # Copy all files to the container
 COPY . .
 
-# Install Python dependencies
+# Create and activate virtual environment
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python dependencies in the virtual environment
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
@@ -30,4 +34,4 @@ RUN pip install -r requirements.txt
 EXPOSE 8080
 
 # Command to run the application
-CMD ["python3", "run_ui.py"]
+CMD ["/opt/venv/bin/python3", "run_ui.py"]
