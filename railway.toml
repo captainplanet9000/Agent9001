@@ -4,8 +4,8 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "sh -c \"python3 ./initialize.py && python3 ./run_ui.py --host 0.0.0.0 --port 80\""
-healthcheckPath = "/"
-healthcheckTimeout = 300
+healthcheckPath = "/api/health"
+healthcheckTimeout = 600
 restartPolicyType = "ON_FAILURE"
 numReplicas = 1
 

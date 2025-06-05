@@ -35,6 +35,12 @@ lock = threading.Lock()
 basic_auth = BasicAuth(app)
 
 
+@app.route('/api/health')
+def health_check():
+    """Simple health check endpoint for Railway deployment verification."""
+    return {"status": "ok"}, 200
+
+
 def is_loopback_address(address):
     loopback_checker = {
         socket.AF_INET: lambda x: struct.unpack("!I", socket.inet_aton(x))[0]
