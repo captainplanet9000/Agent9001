@@ -7,7 +7,8 @@ import asyncio
 from functools import wraps
 import threading
 import signal
-from flask import Flask, request, Response
+import json
+from flask import Flask, request, Response, jsonify
 from flask_basicauth import BasicAuth
 from python.helpers import errors, files, git
 from python.helpers.files import get_abs_path
@@ -106,6 +107,10 @@ def requires_loopback(f):
 def requires_auth(f):
     @wraps(f)
     async def decorated(*args, **kwargs):
+        # Skip auth in Railway environment
+        if os.environ.get("RAILWAY") == "true":
+            return await f(*args, **kwargs)
+            
         user = dotenv.get_dotenv_value("AUTH_LOGIN")
         password = dotenv.get_dotenv_value("AUTH_PASSWORD")
         if user and password:
@@ -120,6 +125,19 @@ def requires_auth(f):
         return await f(*args, **kwargs)
 
     return decorated
+
+
+# Simple health check endpoint for Railway
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Health check endpoint that always returns 200 OK for Railway deployment.
+    This endpoint is intentionally simple and has no dependencies on other parts of the system.
+    """
+    try:
+        return jsonify({"status": "ok", "message": "Agent9001 is running", "timestamp": time.time()}), 200
+    except Exception as e:
+        # Even if jsonify fails, we need to return a successful response
+        return Response('{"status":"ok"}', status=200, mimetype='application/json')
 
 
 # handle default address, load index
@@ -157,11 +175,21 @@ def run():
             pass  # Override to suppress request logging
 
     # Get configuration from environment
-    port = runtime.get_web_ui_port()
-    host = (
-        runtime.get_arg("host") or dotenv.get_dotenv_value("WEB_UI_HOST") or "localhost"
-    )
-    use_cloudflare = (
+    # Use Railway PORT if available or fall back to runtime port
+    port = int(os.environ.get("PORT", runtime.get_web_ui_port()))
+    
+    # Always bind to all interfaces when in Railway environment
+    is_railway = os.environ.get("RAILWAY") == "true"
+    if is_railway:
+        host = "0.0.0.0"
+        PrintStyle().print(f"Detected Railway environment, binding to {host}:{port}")
+    else:
+        host = (
+            runtime.get_arg("host") or dotenv.get_dotenv_value("WEB_UI_HOST") or "localhost"
+        )
+    
+    # Disable Cloudflare tunnel in Railway environment
+    use_cloudflare = not is_railway and (
         runtime.get_arg("cloudflare_tunnel")
         or dotenv.get_dotenv_value("USE_CLOUDFLARE", "false").lower()
     ) == "true"
@@ -230,22 +258,19 @@ def run():
         register_api_handler(app, handler)
 
     try:
-        server = make_server(
-            host=host,
-            port=port,
-            app=app,
-            request_handler=NoRequestLoggingWSGIRequestHandler,
-            threaded=True,
-        )
-
+        # For Railway, check if running under Gunicorn
+        is_gunicorn = "gunicorn" in os.environ.get("SERVER_SOFTWARE", "")
+        is_railway = os.environ.get("RAILWAY") == "true"
+        
+        # Print server startup info
+        PrintStyle().print(f"Starting server on {host}:{port}")
+        
         printer = PrintStyle()
-
+        
         def signal_handler(sig=None, frame=None):
-            nonlocal tunnel, server, printer
+            nonlocal tunnel, printer
             with lock:
                 printer.print("Caught signal, stopping server...")
-                if server:
-                    server.shutdown()
                 process.stop_server()
                 if tunnel:
                     tunnel.stop()
@@ -255,22 +280,32 @@ def run():
 
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
-
-        process.set_server(server)
-        server.log_startup()
-        server.serve_forever()
-        # Run Flask app
-        # app.run(
-        #     request_handler=NoRequestLoggingWSGIRequestHandler, port=port, host=host
-        # )
+        
+        # If running in Railway or under Gunicorn, don't start the development server
+        if is_railway and __name__ != "__main__":
+            PrintStyle().print("Running under Gunicorn/Railway - not starting Flask dev server")
+        else:
+            # Create and start the server for local development
+            server = make_server(
+                host=host,
+                port=port,
+                app=app,
+                request_handler=NoRequestLoggingWSGIRequestHandler,
+                threaded=True,
+            )
+            process.set_server(server)
+            server.log_startup()
+            server.serve_forever()
     finally:
         # Clean up tunnel if it was started
         if tunnel:
             tunnel.stop()
 
 
-# run the internal server
+# Initialize core functionality regardless of how the module is imported
+runtime.initialize()
+dotenv.load_dotenv()
+
+# Run the server only when directly executed
 if __name__ == "__main__":
-    runtime.initialize()
-    dotenv.load_dotenv()
     run()

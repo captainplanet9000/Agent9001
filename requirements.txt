@@ -19,6 +19,8 @@ langchain-ollama==0.2.2
 langchain-openai==0.3.1
 openai-whisper==20240930
 lxml_html_clean==0.3.1
+gunicorn==21.2.0
+gevent==24.2.1
 markdown==3.7
 newspaper3k==0.2.8
 paramiko==3.5.0
