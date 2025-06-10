@@ -6,7 +6,7 @@ builder = "nixpacks"
 startCommand = "python3 -u railway_app.py"
 healthcheckPath = "/"
 healthcheckTimeout = 300
-restartPolicyType = "on-failure"
+restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
 [environments.production.env]
