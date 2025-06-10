@@ -8,6 +8,7 @@ from functools import wraps
 import threading
 import signal
 import json
+import traceback
 from flask import Flask, request, Response, jsonify
 from flask_basicauth import BasicAuth
 from python.helpers import errors, files, git
@@ -166,8 +167,23 @@ def run():
     from werkzeug.serving import WSGIRequestHandler
     from werkzeug.serving import make_server
 
+    # Add debug info for Railway deployment
+    is_railway = os.environ.get("RAILWAY") == "true"
+    if is_railway:
+        print(f"======== STARTING AGENT9001 IN RAILWAY ENVIRONMENT ========")
+        print(f"Python version: {sys.version}")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"Environment variables: PORT={os.environ.get('PORT')}")
+        print(f"Files in current directory: {os.listdir('.')}")
+        sys.stdout.flush()
+    
     PrintStyle().print("Starting job loop...")
-    job_loop = DeferredTask().start_task(run_loop)
+    try:
+        job_loop = DeferredTask().start_task(run_loop)
+        PrintStyle().print("Job loop started successfully")
+    except Exception as e:
+        print(f"Error starting job loop: {str(e)}")
+        traceback.print_exc()
 
     PrintStyle().print("Starting server...")
     class NoRequestLoggingWSGIRequestHandler(WSGIRequestHandler):
@@ -281,9 +297,21 @@ def run():
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         
-        # If running in Railway or under Gunicorn, don't start the development server
-        if is_railway and __name__ != "__main__":
-            PrintStyle().print("Running under Gunicorn/Railway - not starting Flask dev server")
+        # We're not running under Gunicorn anymore - simple Python command for Railway
+        if is_railway:
+            PrintStyle().print(f"Railway deployment: Running Flask app directly on {host}:{port}")
+            try:
+                # Use Flask's built-in server for simplicity in Railway environment
+                app.run(
+                    host=host,
+                    port=port,
+                    debug=False,
+                    use_reloader=False
+                )
+            except Exception as e:
+                print(f"ERROR STARTING FLASK APP: {str(e)}")
+                traceback.print_exc()
+                sys.exit(1)
         else:
             # Create and start the server for local development
             server = make_server(
