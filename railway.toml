@@ -1,14 +1,11 @@
-# Railway configuration for Agent Zero
+# Simplified Railway configuration for Agent Zero v0.8.4
 [build]
 builder = "nixpacks"
 
 [deploy]
 startCommand = "python3 -u railway_app.py"
 healthcheckPath = "/health"
-healthcheckTimeout = 300
+healthcheckTimeout = 60
 
 [environments.production.env]
 PYTHONUNBUFFERED = "1"
-FLASK_ENV = "production"
-PORT = "8080"
-DEBUG = "true"
