@@ -8,6 +8,15 @@ healthcheckPath = "/health"
 healthcheckTimeout = 600
 restartPolicyType = "on_failure"
 
+# Important: System is checking root path, add route for it
+[healthchecks]
+
+[healthchecks.web]
+path = "/"
+interval = "10s"
+timeout = "5s"
+graceInterval = "1m"
+
 [variables]
 RAILWAY = "true"
 PYTHONUNBUFFERED = "1"
