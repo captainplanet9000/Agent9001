@@ -3,19 +3,20 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python3 run_ui.py"
-healthcheckPath = "/health"
-healthcheckTimeout = 600
-restartPolicyType = "on_failure"
+startCommand = "python3 -u railway_app.py"
+healthcheckPath = "/"
+healthcheckTimeout = 60
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = 10
 
-# Important: System is checking root path, add route for it
-[healthchecks]
+[environments.production.env]
+RAILWAY = "true"
+PYTHONUNBUFFERED = "1"
+DEBUG = "true"
+FLASK_ENV = "production"
+FLASK_APP = "railway_app.py"
 
-[healthchecks.web]
-path = "/"
-interval = "10s"
-timeout = "5s"
-graceInterval = "1m"
+# Simple configuration for Railway health checks
 
 [variables]
 RAILWAY = "true"

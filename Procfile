@@ -1,1 +1,1 @@
-web: python3 run_ui.py
+web: python3 -u railway_app.py
