@@ -5,7 +5,7 @@ builder = "nixpacks"
 [deploy]
 startCommand = "python3 -u railway_app.py"
 healthcheckPath = "/"
-healthcheckTimeout = 60
+healthcheckTimeout = 300
 restartPolicyType = "on-failure"
 restartPolicyMaxRetries = 10
 
