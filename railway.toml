@@ -4,10 +4,8 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "python3 -u railway_app.py"
-healthcheckPath = "/"
-healthcheckTimeout = 300
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 10
+healthcheckPath = "/health"
+healthcheckTimeout = 200
 
 [environments.production.env]
 RAILWAY = "true"
@@ -15,9 +13,4 @@ PYTHONUNBUFFERED = "1"
 DEBUG = "true"
 FLASK_ENV = "production"
 FLASK_APP = "railway_app.py"
-
-# Simple configuration for Railway health checks
-
-[variables]
-RAILWAY = "true"
-PYTHONUNBUFFERED = "1"
+PORT = "8080"
